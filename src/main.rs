@@ -132,12 +132,15 @@ fn view<T: std::io::Write>(
 
     for i in 0..8 {
         execute!(std::io::stderr(), MoveTo(0, i as u16))?;  // エラー出力ストリームを使用して行の先頭にカーソルを移動
-
         for j in 0..8 {
             if i == cursor.0 && j == cursor.1 {
                 execute!(output, SetBackgroundColor(Color::Grey))?;  // カーソル位置の背景色を灰色に設定
             } else {
-                execute!(output, SetBackgroundColor(Color::DarkGreen))?;  // その他のセルの背景色を緑に設定
+                if (i+ j) % 2 == 0 {
+                    execute!(output, SetBackgroundColor(Color::DarkGreen))?;
+                } else {
+                    execute!(output, SetBackgroundColor(Color::Green))?;
+                }
             }
 
             match field[i][j] {
