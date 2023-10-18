@@ -67,12 +67,14 @@ fn input(
             ..
         }) => {
             field[cursor.0][cursor.1] = Masu::White;  // 'w'キーが押された場合、指定した位置に白いマスを設定
+            auto_reverse(field, *cursor)
         }
         Event::Key(KeyEvent {
             code: KeyCode::Char('b'),
             ..
         }) => {
             field[cursor.0][cursor.1] = Masu::Black;  // 'b'キーが押された場合、指定した位置に黒いマスを設定
+            auto_reverse(field, *cursor)
         }
         Event::Key(KeyEvent {
             code: KeyCode::Backspace,
@@ -128,6 +130,56 @@ fn init_field(field: &mut [[Masu; 8]; 8]) {
     field[4][4] = Masu::Black;
     field[3][4] = Masu::White;
     field[4][3] = Masu::White;
+}
+
+fn auto_reverse(field: &mut[[Masu; 8]; 8], point: (usize, usize)) {
+    let direction = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+    for dir in &direction {
+        let mut count = 0; // 同じ色のコマを数えるためのカウンターを初期化
+    
+        // 8方向に対して探索を開始
+        let mut x = point.0 as isize + dir.0; // X座標を更新して新しい位置を計算
+        let mut y = point.1 as isize + dir.1; // Y座標を更新して新しい位置を計算
+    
+        // 盤面内に位置しているか確認
+        while x >= 0 && x < 8 && y >= 0 && y < 8 {
+            if field[x as usize][y as usize] == Masu::Empty {
+                // 空マスに到達したらひっくり返せないためループ終了
+                break;
+            }
+    
+            if field[x as usize][y as usize] == field[point.0][point.1] {
+                // 同じ色のコマが見つかった場合、間のコマをひっくり返す
+    
+                let mut tx = point.0 as isize + dir.0; // ひっくり返す処理用のX座標
+                let mut ty = point.1 as isize + dir.1; // ひっくり返す処理用のY座標
+    
+                // 間のコマをひっくり返す処理
+                while tx != x || ty != y {
+                    field[tx as usize][ty as usize] = field[point.0][point.1];
+                    tx += dir.0; // 次のコマに進む
+                    ty += dir.1; // 次のコマに進む
+                }
+    
+                // ひっくり返し処理が終了
+                break;
+            }
+    
+            // 次の位置に進む
+            x += dir.0;
+            y += dir.1;
+            count += 1; // 同じ色のコマを数える
+        }
+    }    
 }
 
 fn main() -> Result<()> {
@@ -219,5 +271,13 @@ mod tests {
         assert!(field[4][4] == Masu::Black);
         assert!(field[3][4] == Masu::White);
         assert!(field[4][3] == Masu::White);
+    }
+    fn auto_reverse_test() {
+        let mut field = [[Masu::Empty; 8]; 8];
+        field[3][3] = Masu::Black;
+        field[3][4] = Masu::White;
+        field[3][5] = Masu::Black;
+        auto_reverse(&mut field, (3, 5));
+        assert!(field[3][4] == Masu::Black);
     }
 }
