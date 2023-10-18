@@ -57,29 +57,30 @@ fn main() -> Result<()> {
         }*/
 
 
+// input関数、入力を受け取り内部状態を更新する関数
 fn input(
-    event: Event,
-    field: &mut [[Masu; 8]; 8],
-    cursor: &mut (usize, usize),
-    end: &mut bool,
+    event: Event,                // イベント（キー入力など）を受け取るためのパラメータ
+    field: &mut [[Masu; 8]; 8],  // 8x8のMasu列を持つ2次元配列への可変参照
+    cursor: &mut (usize, usize),  // カーソルの位置（行、列）を表すタプルへの可変参照
+    end: &mut bool,              // ゲームを終了するかどうかを表すブール値への可変参照
 ) -> Result<()> {
     match event {
         Event::Key(KeyEvent {
             code: KeyCode::Esc, ..
-        }) => *end = true,
+        }) => *end = true,  // Escキーが押された場合、ゲームを終了
         Event::Key(KeyEvent {
             code: KeyCode::Left,
             ..
         }) => {
             if cursor.1 != 0 {
-                cursor.1 -= 1;
+                cursor.1 -= 1;  // 左キーが押された場合、カーソルを左に移動
             }
         }
         Event::Key(KeyEvent {
             code: KeyCode::Up, ..
         }) => {
             if cursor.0 != 0 {
-                cursor.0 -= 1;
+                cursor.0 -= 1;  // 上キーが押された場合、カーソルを上に移動
             }
         }
         Event::Key(KeyEvent {
@@ -87,7 +88,7 @@ fn input(
             ..
         }) => {
             if cursor.1 != 7 {
-                cursor.1 += 1;
+                cursor.1 += 1;  // 右キーが押された場合、カーソルを右に移動
             }
         }
         Event::Key(KeyEvent {
@@ -95,63 +96,68 @@ fn input(
             ..
         }) => {
             if cursor.0 != 7 {
-                cursor.0 += 1;
+                cursor.0 += 1;  // 下キーが押された場合、カーソルを下に移動
             }
         }
         Event::Key(KeyEvent {
             code: KeyCode::Char('w'),
             ..
         }) => {
-            field[cursor.0][cursor.1] = Masu::White;
+            field[cursor.0][cursor.1] = Masu::White;  // 'w'キーが押された場合、指定した位置に白いマスを設定
         }
         Event::Key(KeyEvent {
             code: KeyCode::Char('b'),
             ..
         }) => {
-            field[cursor.0][cursor.1] = Masu::Black;
+            field[cursor.0][cursor.1] = Masu::Black;  // 'b'キーが押された場合、指定した位置に黒いマスを設定
         }
         Event::Key(KeyEvent {
             code: KeyCode::Backspace,
             ..
         }) => {
-            field[cursor.0][cursor.1] = Masu::Empty;
+            field[cursor.0][cursor.1] = Masu::Empty;  // バックスペースキーが押された場合、指定した位置を空に設定
         }
-        _ => {}
+        _ => {}  // その他のイベントに対しては何もしない
     }
-    return Ok(());
+    return Ok(());  // 関数の正常な実行を示すResultを返す
 }
+
+
 fn view<T: std::io::Write>(
-    output: &mut T,
-    field: &[[Masu; 8]; 8],
-    cursor: &(usize, usize),
+    output: &mut T,               // 出力先のストリームへの可変参照
+    field: &[[Masu; 8]; 8],      // 8x8のMasu列を持つ2次元配列への参照
+    cursor: &(usize, usize),     // カーソルの位置（行、列）を表すタプルへの参照
 ) -> Result<()> {
-    execute!(output, MoveTo(0, 0),)?;
+    execute!(output, MoveTo(0, 0),)?;  // 画面の左上にカーソルを移動
+
     for i in 0..8 {
-        // ここでi行目を描画する前にカーソルを左端に戻す
-        execute!(std::io::stderr(), MoveTo(0, i as u16))?;
+        execute!(std::io::stderr(), MoveTo(0, i as u16))?;  // エラー出力ストリームを使用して行の先頭にカーソルを移動
+
         for j in 0..8 {
             if i == cursor.0 && j == cursor.1 {
-                execute!(output, SetBackgroundColor(Color::Grey))?;
+                execute!(output, SetBackgroundColor(Color::Grey))?;  // カーソル位置の背景色を灰色に設定
             } else {
-                execute!(output, SetBackgroundColor(Color::DarkGreen))?;
+                execute!(output, SetBackgroundColor(Color::DarkGreen))?;  // その他のセルの背景色を緑に設定
             }
+
             match field[i][j] {
                 Masu::Empty => {
-                    execute!(output, Print('　'))?;
+                    execute!(output, Print('　'))?;  // 空のマスを描画
                 }
                 Masu::Black => {
-                    execute!(output, Print('⚫'))?;
+                    execute!(output, Print('⚫'))?;  // 黒い石を描画
                 }
                 Masu::White => {
-                    execute!(output, Print('⚪'))?;
+                    execute!(output, Print('⚪'))?;  // 白い石を描画
                 }
             }
         }
-        execute!(output, Print("\n"))?;
+        execute!(output, Print("\n"))?;  // 行の描画が終了したので改行
     }
-    execute!(output, ResetColor)?;
+    execute!(output, ResetColor)?;  // 色設定をリセットして元の色に戻す
     return Ok(());
 }
+
 
 fn main() -> Result<()> {
     let mut field = [[Masu::Empty; 8]; 8];
