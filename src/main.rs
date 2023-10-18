@@ -19,46 +19,9 @@ enum Masu {
     White, // 白
 }
 
-/*
-fn main() -> Result<()> {
-    // 内部のデータは変化するためmutをつけて定義
-    let mut field = [[Masu::Empty; 8]; 8];
-    let mut cursor = (0, 0);
-    // 以下2行はcrosstermでcuiアプリを作成するときに必ず行う
-    enable_raw_mode()?;
-    execute!(std::io::stderr(), Hide, EnterAlternateScreen)?;
-
-    loop {
-        // カーソルの初期位置を左上のマスに固定
-        execute!(std::io::stderr(), MoveTo(0, 0),)?;
-        for i in 0..8 {
-            // ここでi行目を描画する前にカーソルを左端に戻す
-            execute!(std::io::stderr(), MoveTo(0, i as u16))?;
-            for j in 0..8 {
-                if i == cursor.0 && j == cursor.1 {
-                    execute!(std::io::stderr(), SetBackgroundColor(Color::Grey))?;
-                } else {
-                    execute!(std::io::stderr(), SetBackgroundColor(Color::DarkGreen))?;
-                }
-                match field[i][j] {
-                    Masu::Empty => {
-                        execute!(std::io::stderr(), Print("　"))?; // 全角スペース
-                    }
-                    Masu::Black => {
-                        execute!(std::io::stderr(), Print("●"))?;
-                    }
-                    Masu::White => {
-                        execute!(std::io::stderr(), Print("○"))?;
-                    }
-                }
-                
-            }
-            execute!(std::io::stderr(), Print("\n"))?; // 全角の改行
-        }*/
-
-
 // input関数、入力を受け取り内部状態を更新する関数
 fn input(
+    // fieldとcursorは可変のためmutで定義
     event: Event,                // イベント（キー入力など）を受け取るためのパラメータ
     field: &mut [[Masu; 8]; 8],  // 8x8のMasu列を持つ2次元配列への可変参照
     cursor: &mut (usize, usize),  // カーソルの位置（行、列）を表すタプルへの可変参照
@@ -122,7 +85,6 @@ fn input(
     return Ok(());  // 関数の正常な実行を示すResultを返す
 }
 
-
 fn view<T: std::io::Write>(
     output: &mut T,               // 出力先のストリームへの可変参照
     field: &[[Masu; 8]; 8],      // 8x8のMasu列を持つ2次元配列への参照
@@ -161,6 +123,12 @@ fn view<T: std::io::Write>(
     return Ok(());
 }
 
+fn init_field(field: &mut [[Masu; 8]; 8]) {
+    field[3][3] = Masu::Black;
+    field[4][4] = Masu::Black;
+    field[3][4] = Masu::White;
+    field[4][3] = Masu::White;
+}
 
 fn main() -> Result<()> {
     let mut field = [[Masu::Empty; 8]; 8];
@@ -168,10 +136,18 @@ fn main() -> Result<()> {
     let mut end = false;
     enable_raw_mode()?;
     execute!(std::io::stderr(), Hide, EnterAlternateScreen)?;
+
+    // 初期配置を設定
+    init_field(&mut field);
+
     while !end {
+        // 画面を描画
         view(&mut std::io::stderr(), &field, &cursor)?;
+
+        // ユーザーの入力を処理
         input(read()?, &mut field, &mut cursor, &mut end)?;
     }
+
     execute!(std::io::stderr(), Show, LeaveAlternateScreen)?;
     disable_raw_mode()?;
     return Ok(());
@@ -234,5 +210,14 @@ mod tests {
         let mut f = File::open("testdata/initview").unwrap();
         f.read_to_end(&mut assert_buf).unwrap();
         assert!(buf == assert_buf);
+    }
+    #[test]
+    fn init_field_test() {
+        let mut field = [[Masu::Empty; 8]; 8];
+        init_field(&mut field);
+        assert!(field[3][3] == Masu::Black);
+        assert!(field[4][4] == Masu::Black);
+        assert!(field[3][4] == Masu::White);
+        assert!(field[4][3] == Masu::White);
     }
 }
