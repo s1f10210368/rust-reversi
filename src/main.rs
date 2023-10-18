@@ -19,6 +19,12 @@ enum Masu {
     White, // 白
 }
 
+#[derive(Copy, Clone, PartialEq)]
+enum Turn {
+    Black,
+    White,
+}
+
 // input関数、入力を受け取り内部状態を更新する関数
 fn input(
     // fieldとcursorは可変のためmutで定義
@@ -26,6 +32,7 @@ fn input(
     field: &mut [[Masu; 8]; 8],  // 8x8のMasu列を持つ2次元配列への可変参照
     cursor: &mut (usize, usize),  // カーソルの位置（行、列）を表すタプルへの可変参照
     end: &mut bool,              // ゲームを終了するかどうかを表すブール値への可変参照
+    turn: &mut Turn,
 ) -> Result<()> {
     match event {
         Event::Key(KeyEvent {
@@ -77,6 +84,33 @@ fn input(
             auto_reverse(field, *cursor)
         }
         Event::Key(KeyEvent {
+            code: KeyCode::Char('p'),
+            ..
+        }) => match turn {
+            Turn::Black => {
+                *turn = Turn::White;
+            }
+            Turn::White => {
+                *turn = Turn::Black;
+            }
+        }
+        Event::Key(KeyEvent {
+            code: KeyCode::Enter,
+            ..
+        }) => {
+            match turn {
+                Turn::Black => {
+                    field[cursor.0][cursor.1] = Masu::Black;
+                    *turn = Turn::White;
+                }
+                Turn::White => {
+                    field[cursor.0][cursor.1] = Masu::White;
+                    *turn = Turn::Black;
+                }
+            }
+            auto_reverse(field, *cursor)
+        }
+        Event::Key(KeyEvent {
             code: KeyCode::Backspace,
             ..
         }) => {
@@ -91,6 +125,7 @@ fn view<T: std::io::Write>(
     output: &mut T,               // 出力先のストリームへの可変参照
     field: &[[Masu; 8]; 8],      // 8x8のMasu列を持つ2次元配列への参照
     cursor: &(usize, usize),     // カーソルの位置（行、列）を表すタプルへの参照
+    turn: &Turn,
 ) -> Result<()> {
     execute!(output, MoveTo(0, 0),)?;  // 画面の左上にカーソルを移動
 
@@ -122,6 +157,14 @@ fn view<T: std::io::Write>(
         execute!(output, Print("\n"))?;  // 行の描画が終了したので改行
     }
     execute!(output, ResetColor)?;  // 色設定をリセットして元の色に戻す
+    match turn {
+        Turn::Black => {
+            execute!(output, Print("Black Turn\n"))?;
+        }
+        Turn::White => {
+            execute!(output, Print("White Turn\n"))?;
+        }
+    }
     return Ok(());
 }
 
@@ -186,6 +229,7 @@ fn main() -> Result<()> {
     let mut field = [[Masu::Empty; 8]; 8];
     let mut cursor = (0, 0);
     let mut end = false;
+    let mut turn = Turn::Black;
     enable_raw_mode()?;
     execute!(std::io::stderr(), Hide, EnterAlternateScreen)?;
 
@@ -194,10 +238,10 @@ fn main() -> Result<()> {
 
     while !end {
         // 画面を描画
-        view(&mut std::io::stderr(), &field, &cursor)?;
+        view(&mut std::io::stderr(), &field, &cursor, &turn)?;
 
         // ユーザーの入力を処理
-        input(read()?, &mut field, &mut cursor, &mut end)?;
+        input(read()?, &mut field, &mut cursor, &mut end, &mut turn)?;
     }
 
     execute!(std::io::stderr(), Show, LeaveAlternateScreen)?;
@@ -216,46 +260,51 @@ mod tests {
         let mut field = [[Masu::Empty; 8]; 8];
         let mut cursor = (0, 0);
         let mut end = false;
-        let wkey = Event::Key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::NONE));
-        super::input(wkey, &mut field, &mut cursor, &mut end).unwrap();
-        assert!(field[0][0] == Masu::White);
+        let mut turn = Turn::Black;
+        let enterkey = Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        super::input(enterkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
+        assert!(field[0][0] == Masu::Black);
+        assert!(turn == Turn::White);
+        let pkey = Event::Key(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::NONE));
+        super::input(pkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
+        assert!(turn == Turn::Black);
+        super::input(pkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
+        assert!(turn == Turn::White);
         let rightkey = Event::Key(KeyEvent::new(KeyCode::Right, KeyModifiers::NONE));
-        super::input(rightkey, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(rightkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(cursor.0 == 0);
         assert!(cursor.1 == 1);
         let downkey = Event::Key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE));
-        super::input(downkey, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(downkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(cursor.0 == 1);
         assert!(cursor.1 == 1);
-        let bkey = Event::Key(KeyEvent::new(KeyCode::Char('b'), KeyModifiers::NONE));
-        super::input(bkey, &mut field, &mut cursor, &mut end).unwrap();
-        assert!(field[1][1] == Masu::Black);
         let leftkey = Event::Key(KeyEvent::new(KeyCode::Left, KeyModifiers::NONE));
-        super::input(leftkey, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(leftkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(cursor.0 == 1);
         assert!(cursor.1 == 0);
         let upkey = Event::Key(KeyEvent::new(KeyCode::Up, KeyModifiers::NONE));
-        super::input(upkey, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(upkey, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(cursor.0 == 0);
         assert!(cursor.1 == 0);
         let backspace = Event::Key(KeyEvent::new(KeyCode::Backspace, KeyModifiers::NONE));
-        super::input(backspace, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(backspace, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(field[0][0] == Masu::Empty);
         let esc = Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
-        super::input(esc, &mut field, &mut cursor, &mut end).unwrap();
+        super::input(esc, &mut field, &mut cursor, &mut end, &mut turn).unwrap();
         assert!(end);
     }
     #[test]
     fn view_test() {
         let mut field = [[Masu::Empty; 8]; 8];
         let cursor = (0, 0);
+        let turn = Turn::Black;
         field[3][3] = Masu::Black;
         field[4][4] = Masu::Black;
         field[3][4] = Masu::White;
         field[4][3] = Masu::White;
         let mut buf = Vec::<u8>::new();
         let mut assert_buf = Vec::<u8>::new();
-        super::view(&mut buf, &field, &cursor).unwrap();
+        super::view(&mut buf, &field, &cursor, &turn).unwrap();
         //let mut f = File::create("testdata/initview").unwrap();
         //use std::io::Write;
         //f.write_all(buf.into_boxed_slice().as_ref()).unwrap();
@@ -272,6 +321,7 @@ mod tests {
         assert!(field[3][4] == Masu::White);
         assert!(field[4][3] == Masu::White);
     }
+    #[test]
     fn auto_reverse_test() {
         let mut field = [[Masu::Empty; 8]; 8];
         field[3][3] = Masu::Black;
