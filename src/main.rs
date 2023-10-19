@@ -35,6 +35,7 @@ fn input(
     turn: &mut Turn,
 ) -> Result<()> {
     match event {
+        // キーを押したときの操作の構文
         Event::Key(KeyEvent {
             code: KeyCode::Esc, ..
         }) => *end = true,  // Escキーが押された場合、ゲームを終了
