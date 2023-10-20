@@ -104,7 +104,7 @@ fn input(
                     field[cursor.0][cursor.1] = Masu::Black;
                     *turn = Turn::White;
                 }
-                Turn::White => {
+                Turn::White => { // 白のターンの時の操作
                     field[cursor.0][cursor.1] = Masu::White;
                     *turn = Turn::Black;
                 }
