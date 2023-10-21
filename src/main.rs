@@ -188,7 +188,7 @@ fn auto_reverse(field: &mut[[Masu; 8]; 8], point: (usize, usize)) {
         (1, 1),
     ];
     for dir in &direction {
-        let mut count = 0; // 同じ色のコマを数えるためのカウンターを初期化
+        let mut count = 0; // 同じ色のコマを数えるためのカウンターを初期化、最終点数に使用
     
         // 8方向に対して探索を開始
         let mut x = point.0 as isize + dir.0; // X座標を更新して新しい位置を計算
