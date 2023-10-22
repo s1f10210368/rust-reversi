@@ -197,7 +197,7 @@ fn auto_reverse(field: &mut[[Masu; 8]; 8], point: (usize, usize)) {
         // 盤面内に位置しているか確認
         while x >= 0 && x < 8 && y >= 0 && y < 8 {
             if field[x as usize][y as usize] == Masu::Empty {
-                // 空マスに到達したらひっくり返せないためループ終了
+                // 空マスに到達したらひっくり返せないためループ終了,breakでループ終了
                 break;
             }
     
