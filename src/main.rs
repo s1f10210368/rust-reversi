@@ -99,17 +99,19 @@ fn input(
             code: KeyCode::Enter,
             ..
         }) => {
-            match turn {
-                Turn::Black => {
-                    field[cursor.0][cursor.1] = Masu::Black;
-                    *turn = Turn::White;
+            if check_putable(&field, &cursor, &turn) {
+                match turn {
+                    Turn::Black => {
+                        field[cursor.0][cursor.1] = Masu::Black;
+                        *turn = Turn::White;
+                    }
+                    Turn::White => {
+                        field[cursor.0][cursor.1] = Masu::White;
+                        *turn = Turn::Black;
+                    }
                 }
-                Turn::White => { // 白のターンの時の操作
-                    field[cursor.0][cursor.1] = Masu::White;
-                    *turn = Turn::Black;
-                }
+                auto_reverse(field, *cursor)
             }
-            auto_reverse(field, *cursor)
         }
         Event::Key(KeyEvent {
             code: KeyCode::Backspace,
@@ -224,6 +226,50 @@ fn auto_reverse(field: &mut[[Masu; 8]; 8], point: (usize, usize)) {
             count += 1; // 同じ色のコマを数える
         }
     }    
+}
+
+fn check_putable(field: &[[Masu; 8]; 8], point: &(usize, usize), turn: &Turn) -> bool {
+    if field[point.0][point.1] != Masu::Empty {
+        return false;
+    }
+    let direction = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+    let check_color = match turn {
+        Turn::Black => Masu::Black,
+        Turn::White => Masu::White,
+    };
+    for i in 0..direction.len() {
+        let mut count = 0;
+        let count = loop {
+            count += 1;
+            let x = point.0 as isize + direction[i].0 * count;
+            if x < 0 || 8 <= x {
+                break 0;
+            }
+            let y = point.1 as isize + direction[i].1 * count;
+            if y < 0 || 8 <= y {
+                break 0;
+            }
+            if field[x as usize][y as usize] == Masu::Empty {
+                break 0;
+            }
+            if field[x as usize][y as usize] == check_color {
+                break count;
+            }
+        };
+        if count > 1 {
+            return true;
+        }
+    }
+    return false;
 }
 
 fn main() -> Result<()> {
